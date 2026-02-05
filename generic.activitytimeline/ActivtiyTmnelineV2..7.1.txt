@@ -1,0 +1,775 @@
+<!--
+ * ============================================================
+ * VERSION CONTROL BLOCK — AUTHORITATIVE BASELINE
+ * ============================================================
+ * Component: Dynamics Activity Timeline (Single-File Web Resource)
+ *
+ * Baseline Version: v2.7.0
+ * Status: STABLE / GCC HARDENED / UI REFINED
+ *
+ * Last Confirmed State:
+ * - Journey + List dual-view implementation
+ * - Intelligence Panel with tag-safe rich-text interpretation
+ * - v2.7.0 Update: Restored Diagnostic Tray at bottom (Tray UI).
+ * - v2.7.0 Update: Removed 'Open Record' button from Intel Panel.
+ * - v2.7.0 Update: GCC Detection (Hides 'New Tab' on crm9).
+ * - v2.7.0 Update: Scope-Lock for all handlers.
+ *
+ * Architectural Invariants (DO NOT BREAK):
+ * - Helper functions MUST be window-scoped (UCI frame safety).
+ * - Record context prioritized from URL & Opener as per v1.9.5.
+ * - Hide Popout Tab button if URL contains '.crm9.'.
+ * ============================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dynamics Activity Timeline</title>
+
+    <style>
+        :root {
+            --dn-blue: #0078d4;
+            --dn-blue-hover: #005a9e;
+            --dn-neutral-primary: #323130;
+            --dn-neutral-secondary: #605e5c;
+            --dn-neutral-lighter: #f3f2f1;
+            --dn-neutral-light: #edebe9;
+            --dn-white: #ffffff;
+            --dn-border-radius: 4px;
+            --dn-shadow: 0 1.6px 3.6px rgba(0,0,0,0.132), 0 0.3px 0.9px rgba(0,0,0,0.108);
+            
+            --state-completed: #107c10;
+            --state-open: #ffaa44;
+            --state-canceled: #a19f9d;
+
+            --track-color: #d2d0ce;
+            --node-size: 34px;
+            --lane-max: 12;
+        }
+
+        html, body {
+            height: 100%; margin: 0;
+            font-family: "Segoe UI", -apple-system, sans-serif;
+            background-color: var(--dn-white);
+            color: var(--dn-neutral-primary);
+            overflow: hidden;
+        }
+
+        .skip-link { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; background: var(--dn-blue); color: white; z-index: 10000; }
+        .skip-link:focus { position: fixed; left: 10px; top: 10px; width: auto; height: auto; padding: 10px 20px; border-radius: 4px; outline: 3px solid white; }
+
+        .container {
+            display: flex; flex-direction: column; height: 100vh;
+            padding: 15px; box-sizing: border-box; gap: 10px;
+            position: relative;
+        }
+
+        /* Animated Close 'X' */
+        .btn-close-canvas {
+            position: absolute; top: 15px; right: 15px;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--dn-white); border: 1px solid var(--dn-neutral-light);
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 2000; transition: all 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+            color: var(--dn-neutral-secondary);
+            box-shadow: var(--dn-shadow);
+        }
+        .btn-close-canvas:hover { 
+            background: #fde7e9; 
+            color: #d13438; 
+            border-color: #d13438; 
+            transform: rotate(90deg) scale(1.1);
+        }
+        .btn-close-canvas svg { width: 18px; height: 18px; }
+
+        /* v2.7.0 Integrated Diagnostic Bottom Tray */
+        #diagnosticConsole {
+            position: fixed; bottom: 40px; left: 0; right: 0;
+            height: 220px; background: #1e1e1e; color: #d4d4d4; 
+            padding: 0; z-index: 4000; display: none; flex-direction: column; 
+            font-family: "Consolas", monospace; font-size: 11px;
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.3); border-top: 1px solid #444;
+        }
+        .diag-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #333; padding: 6px 15px; border-bottom: 1px solid #444; flex-shrink: 0;
+        }
+        .diag-log { flex: 1; overflow-y: auto; white-space: pre-wrap; line-height: 1.4; padding: 10px 15px; }
+        .log-err { color: #f1707b; font-weight: bold; }
+        .log-success { color: #89d185; }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            border-bottom: 1px solid var(--dn-neutral-light); padding-bottom: 10px;
+            flex-shrink: 0; gap: 15px; flex-wrap: wrap; padding-right: 45px;
+        }
+        .title-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .main-title { font-size: 17px; font-weight: 600; white-space: nowrap; }
+        .record-name-subtitle { font-size: 13px; color: var(--dn-neutral-secondary); font-weight: 400; padding-left: 10px; border-left: 2px solid var(--dn-neutral-light); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .tab-switcher { display: flex; background: var(--dn-neutral-lighter); padding: 3px; border-radius: 8px; border: 1px solid var(--dn-neutral-light); margin-left: 5px; }
+        .tab-btn { padding: 4px 16px; font-size: 13px; border: none; background: none; cursor: pointer; border-radius: 4px; color: var(--dn-neutral-secondary); transition: all 0.2s; }
+        .tab-btn.active { background: var(--dn-white); color: var(--dn-blue); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+        .badge { font-size: 11px; background: var(--dn-blue); color: white; padding: 2px 10px; border-radius: 12px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.2); line-height: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 20px; }
+
+        .filter-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0; flex-shrink: 0; }
+        .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        
+        .type-chip { padding: 4px 14px; border-radius: 16px; font-size: 12px; background: var(--dn-white); border: 1px solid var(--dn-neutral-light); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s ease; user-select: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .type-chip.active { background: var(--dn-neutral-primary); color: var(--dn-white); border-color: var(--dn-neutral-primary); font-weight: 600; }
+
+        .control-group { display: flex; align-items: center; gap: 8px; background: var(--dn-neutral-lighter); padding: 4px 14px; border-radius: 24px; border: 1px solid var(--dn-neutral-light); flex-wrap: wrap; }
+        input[type="text"] { padding: 6px 14px; border: 1px solid var(--dn-neutral-light); border-radius: 18px; font-size: 13px; width: 180px; outline: none; transition: border-color 0.2s; }
+        
+        .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; flex: 1; min-height: 0; overflow: hidden; }
+        .panel { background: var(--dn-white); border: 1px solid var(--dn-neutral-light); border-radius: var(--dn-border-radius); display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { padding: 10px 16px; background: var(--dn-neutral-lighter); font-weight: 600; font-size: 11px; border-bottom: 1px solid var(--dn-neutral-light); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+
+        .details-body { padding: 0; overflow-y: auto; background: var(--dn-white); flex: 1; scrollbar-width: thin; }
+        .detail-section { padding: 14px; }
+        .detail-card { background: var(--dn-neutral-lighter); border: 1px solid var(--dn-neutral-light); border-radius: 6px; padding: 12px; margin-bottom: 12px; }
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; padding-top: 12px; border-top: 1px solid var(--dn-neutral-light); }
+        .detail-item { display: flex; flex-direction: column; gap: 8px; } 
+        .detail-label { font-size: 9px; font-weight: 800; color: var(--dn-neutral-secondary); text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.8; }
+        .detail-value { font-size: 11px; font-weight: 600; color: var(--dn-neutral-primary); line-height: 1.2; }
+        
+        .readability-controls { display: flex; gap: 4px; background: var(--dn-neutral-light); padding: 2px; border-radius: 4px; }
+        .readability-btn { padding: 2px 8px; font-size: 10px; border: none; background: none; cursor: pointer; border-radius: 2px; transition: all 0.15s; }
+        .readability-btn.active { background: white; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        .detail-description-html { line-height: 1.5; word-wrap: break-word; font-size: 12px; color: var(--dn-neutral-secondary); margin-top: 12px; }
+        .font-sz-sm { font-size: 11px !important; }
+        .font-sz-md { font-size: 13px !important; }
+        .font-sz-lg { font-size: 16px !important; }
+
+        .timeline-viewport { flex: 1; overflow: auto; position: relative; background: #fff; background-image: radial-gradient(var(--dn-neutral-light) 1px, transparent 0); background-size: 40px 40px; outline: none; }
+        .timeline-track { position: absolute; top: 60px; left: 50px; right: 50px; height: 2px; background: var(--track-color); z-index: 1; }
+        .node { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; cursor: pointer; z-index: 2; outline: none; transition: transform 0.2s; }
+        .node:hover { transform: translate(-50%, -50%) scale(1.05); z-index: 10; }
+        .node-icon { width: var(--node-size); height: var(--node-size); background: white; border: 2.5px solid var(--dn-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: var(--dn-shadow); flex-shrink: 0; }
+        .node-side-meta { display: flex; flex-direction: column; font-size: 10px; line-height: 1.1; background: rgba(255,255,255,0.9); padding: 4px 6px; border-radius: 4px; white-space: nowrap; border: 1px solid var(--dn-neutral-light); }
+        .node-label { margin-top: 8px; font-size: 11px; font-weight: 600; text-align: center; color: var(--dn-neutral-primary); background: rgba(255,255,255,0.95); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--dn-neutral-light); box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 100px; white-space: normal; word-wrap: break-word; line-height: 1.1; }
+
+        .list-viewport { flex: 1; overflow-y: auto; padding: 20px; background: var(--dn-neutral-lighter); min-height: 300px; }
+        .list-item { display: flex; gap: 16px; position: relative; padding-bottom: 24px; align-items: flex-start; }
+        .list-card { flex: 1; background: white; border: 1px solid var(--dn-neutral-light); border-radius: 4px; padding: 12px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; outline: none; }
+
+        .btn { height: 28px; padding: 0 14px; font-size: 12px; background: var(--dn-white); border: 1px solid var(--dn-neutral-light); border-radius: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; gap: 6px; white-space: nowrap; }
+        .btn.primary { background: var(--dn-blue); color: white; border: none; }
+        .btn.outline { border: 1px solid var(--dn-blue); color: var(--dn-blue); }
+        .btn-icon-only { padding: 0; width: 34px; border-radius: 50%; }
+
+        .footer-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 15px; flex-shrink: 0; border-top: 1px solid var(--dn-neutral-light); background: var(--dn-neutral-lighter); }
+        .version-tag { font-size: 10px; color: var(--dn-neutral-secondary); opacity: 0.8; user-select: none; display: flex; align-items: center; gap: 10px; }
+        .btn-debug { font-size: 9px; padding: 2px 8px; border: 1px solid #ccc; background: #eee; cursor: pointer; border-radius: 3px; font-weight: bold; }
+        .data-status-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; border: 1px solid transparent; }
+        .status-live { background: #dff6dd; color: #107c10; border-color: #107c10; }
+        .status-sample { background: #fff4ce; color: #797775; border-color: #797775; }
+
+        #loadingOverlay { position: fixed; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; gap: 10px; font-weight: 600; }
+        #notificationHost { position: fixed; bottom: 20px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 5px; }
+        .notification { background: #323130; color: white; padding: 12px 16px; border-radius: 4px; font-size: 11px; box-shadow: var(--dn-shadow); }
+        .highlight-mark { background-color: #fff100; color: black; font-weight: bold; border-radius: 2px; padding: 0 1px; }
+    </style>
+</head>
+
+<body>
+    <a href="#viewport" class="skip-link">Skip to timeline content</a>
+    <div id="notificationHost"></div>
+
+    <!-- v2.7.0 Integrated Diagnostic Bottom Tray -->
+    <div id="diagnosticConsole">
+        <div class="diag-header">
+            <strong>GCC Stability & Filter Log</strong>
+            <div style="display:flex; gap:5px">
+                <button class="btn" style="background:#0078d4; color:white; border:none;" onclick="window.copyLogs()">Copy Logs</button>
+                <button class="btn" style="background:none; color:white; border:1px solid #666;" onclick="window.toggleDiagnostics()">Close</button>
+            </div>
+        </div>
+        <div class="diag-log" id="diagLog">App Initialized...</div>
+    </div>
+
+    <div class="container">
+        <!-- Close 'X' Button -->
+        <button class="btn-close-canvas" id="btnCloseWindow" title="Close this timeline view">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <header class="header">
+            <div class="title-group">
+                <span class="main-title">Activity Journey</span>
+                <span id="recordNameSubtitle" class="record-name-subtitle" style="display:none"></span>
+                <span id="countBadge" class="badge" title="Total interaction count">0</span>
+                <div class="tab-switcher" role="tablist">
+                    <button class="tab-btn active" id="tabJourney" title="Visual Timeline" onclick="window.switchTab('journey')">Journey</button>
+                    <button class="tab-btn" id="tabList" title="Data Feed" onclick="window.switchTab('list')">List</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-item">
+                    <label for="daysFilter">Range:</label>
+                    <select id="daysFilter" onchange="window.handleFilterChange()" style="border:none; background:transparent; font-weight:600; cursor:pointer; font-size:12px;">
+                        <option value="7">7 Days</option>
+                        <option value="30" selected>30 Days</option>
+                        <option value="90">90 Days</option>
+                        <option value="365">1 Year</option>
+                    </select>
+                </div>
+                <div class="control-item">
+                    <input type="range" id="zoomSlider" min="800" max="4000" step="100" value="1000" oninput="window.handleZoomChange()">
+                </div>
+                <div class="control-item">
+                    <label style="cursor:pointer; display:flex; align-items:center; gap:4px">
+                        <input type="checkbox" id="timeToggle" onchange="window.handleTimeToggle()">
+                        <span>Time</span>
+                    </label>
+                </div>
+                <button class="btn outline" id="btnExport" title="Export matching records">Export</button>
+                <div style="display:flex; gap:4px;" id="popoutControls">
+                    <button class="btn outline btn-icon-only" id="btnPopoutTab" title="Open in new browser tab">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" x2="21" y1="14" y2="3"></line></svg>
+                    </button>
+                    <button class="btn outline btn-icon-only" id="btnPopoutDialog" title="Open in focused modal">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                    </button>
+                </div>
+                <button class="btn primary" id="btnSync" title="Sync interactions from Dataverse">Sync</button>
+            </div>
+        </header>
+
+        <div class="filter-row">
+            <div id="typeFilters" class="filter-chips"></div>
+            <input type="text" id="searchInput" placeholder="Search interactions... (Ctrl+K)" oninput="window.handleSearch()">
+        </div>
+
+        <div class="content-grid">
+            <section class="panel">
+                <div class="panel-header">
+                    <span id="dateRange">Ready</span>
+                    <span id="statusBadge" role="status" style="font-weight:normal; color:var(--dn-neutral-secondary)">Initialized</span>
+                </div>
+                <div id="viewJourney" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+                    <div class="top-scrollbar-wrapper" id="topScrollWrapper"><div id="topScrollDummy" style="height:1px;"></div></div>
+                    <div class="timeline-viewport" id="viewport" tabindex="0">
+                        <div id="timelineCanvas" style="position:relative; height:100%; min-width:1000px; padding-bottom: 120px;">
+                            <div class="timeline-track"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="viewList" class="list-viewport" style="display:none;">
+                    <div id="listContent" role="feed"></div>
+                </div>
+            </section>
+
+            <aside class="panel">
+                <div class="panel-header">
+                    <span>Intelligence Panel</span>
+                    <div class="readability-controls" id="readabilityCtrl" style="visibility:hidden">
+                        <button class="readability-btn" onclick="window.setFontSize('sm', this)">A-</button>
+                        <button class="readability-btn active" onclick="window.setFontSize('md', this)">A</button>
+                        <button class="readability-btn" onclick="window.setFontSize('lg', this)">A+</button>
+                    </div>
+                </div>
+                <div id="detailsBody" class="details-body">
+                    <div class="detail-section" id="detailsPlaceholder">
+                        <p style="text-align:center; margin-top:40px; color:var(--dn-neutral-secondary)">Select a record to analyze metadata.</p>
+                    </div>
+                    <div id="detailsContent" style="display:none"></div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="footer-row">
+            <div class="version-tag">
+                Baseline v2.7.0
+                <button class="btn-debug" onclick="window.toggleDiagnostics()">Diagnostics</button>
+            </div>
+            <span id="dataStatusBadge" class="data-status-badge status-sample" title="Live means connected to Dynamics">Validating Connection...</span>
+        </div>
+    </div>
+
+<script>
+    /** * GLOBAL ARCHITECTURAL LOCK v2.7.0
+     * Reverts to v1.9.5 discovery while hardening GCC button visibility.
+     * Restores bottom diagnostic tray and streamlines interaction buttons.
+     */
+    
+    let searchTimeout;
+    const MAX_LANES = 12;
+    const EXPORT_CAP = 500;
+
+    const STATE = { 
+        nodes: [], canvasWidth: 1000, daysFilter: 30, showTime: false,
+        activeTab: 'journey', searchQuery: "", activeDisplayNames: new Set(), 
+        allDisplayNamesFound: new Set(), panelFontSize: 'md'
+    };
+
+    const ICONS = {
+        phonecall: "📞", email: "✉️", task: "✅", appointment: "📅",
+        chat: "💬", system: "⚙️", custom: "🧩", ai_negative: "🔴", ai_positive: "🟢", ai_neutral: "⚪", 
+        note: "📝", letter: "✉️", voicemail: "🎙️", default: "📄"
+    };
+
+    const ENTITY_MAP = {
+        4210: 'Phone Call', 4200: 'Email', 4202: 'Task', 4201: 'Appointment',
+        4216: 'Chat', 4207: 'Letter', 4214: 'Voicemail', 4204: 'Fax'
+    };
+
+    window.diagLog = (msg, type = 'info') => {
+        const el = document.getElementById('diagLog'); if (!el) return;
+        const div = document.createElement('div');
+        div.className = `log-${type}`;
+        div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        el.appendChild(div);
+        console.log(`[Timeline] ${msg}`);
+    };
+
+    /** v2.7.0 Environment Hardening: Immediate CSS Injection for GCC Signature */
+    window.applyEnvironmentPolicies = () => {
+        const url = window.location.href.toLowerCase();
+        if (url.includes(".crm9.") || url.includes("gov.content.microsoft")) {
+            const style = document.createElement('style');
+            style.innerHTML = '#btnPopoutTab { display: none !important; }';
+            document.head.appendChild(style);
+            window.diagLog("GCC Detected. Hiding New Tab feature for security compliance.", "success");
+        }
+    };
+
+    window.escapeRegExp = (str) => { return (str || "").replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
+
+    window.interpretHTML = (html, query) => {
+        if (!html) return "";
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        if (!doc || !doc.body) return String(html);
+        if (query && query.length > 2) {
+            const safeQuery = window.escapeRegExp(query);
+            const regex = new RegExp(`(${safeQuery})`, 'gi');
+            const highlightTextNodes = (node) => {
+                if (node.nodeType === 3) {
+                    const parent = node.parentNode;
+                    if (parent && parent.tagName !== 'MARK' && parent.tagName !== 'SCRIPT' && parent.tagName !== 'STYLE') {
+                        const originalText = node.nodeValue;
+                        if (regex.test(originalText)) {
+                            const span = document.createElement('span');
+                            span.innerHTML = originalText.replace(regex, '<mark class="highlight-mark">$1</mark>');
+                            parent.replaceChild(span, node);
+                        }
+                    }
+                } else if (node.nodeType === 1) {
+                    for (let i = node.childNodes.length - 1; i >= 0; i--) {
+                        highlightTextNodes(node.childNodes[i]);
+                    }
+                }
+            };
+            highlightTextNodes(doc.body);
+        }
+        return doc.body.innerHTML;
+    };
+
+    window.sanitizeHTML = (str) => { if (!str) return ""; const div = document.createElement('div'); div.textContent = str; return div.innerHTML; };
+    window.getInitials = (name) => { if (!name || typeof name !== 'string') return ""; return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2); };
+
+    window.safeGetXrm = () => {
+        try { if (window.Xrm && window.Xrm.WebApi) return window.Xrm; } catch(e) {}
+        try { if (window.parent && window.parent.Xrm && window.parent.Xrm.WebApi) return window.parent.Xrm; } catch (e) {}
+        try { if (window.opener && window.opener.Xrm && window.opener.Xrm.WebApi) return window.opener.Xrm; } catch (e) {}
+        try { if (window.opener && window.opener.parent && window.opener.parent.Xrm) return window.opener.parent.Xrm; } catch (e) {}
+        try { if (window.top && window.top.Xrm && window.top.Xrm.WebApi) return window.top.Xrm; } catch (e) {}
+        return null;
+    };
+
+    window.getUrlParameter = (name) => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has(name)) return params.get(name);
+        if (params.has('data')) {
+            const dataStr = params.get('data');
+            const dataParams = new URLSearchParams(dataStr);
+            if (dataParams.has(name)) return dataParams.get(name);
+            try {
+                const nested = new URLSearchParams(decodeURIComponent(dataStr));
+                if (nested.has(name)) return nested.get(name);
+            } catch(e){}
+        }
+        return null;
+    };
+
+    window.getTemporalContext = (date) => {
+        if (!date || isNaN(date.getTime())) return { d: "Unknown", t: "" };
+        const dStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        const tStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return { d: dStr, t: tStr };
+    };
+
+    window.fetchPagedData = async (Xrm, entity, query, cap = EXPORT_CAP) => {
+        try {
+            let records = [];
+            let res = await Xrm.WebApi.retrieveMultipleRecords(entity, query);
+            records.push(...(res.entities || []));
+            while (res.nextLink && records.length < cap) {
+                const nextRel = res.nextLink.includes('?') ? '?' + res.nextLink.split('?')[1] : res.nextLink;
+                res = await Xrm.WebApi.retrieveMultipleRecords(entity, nextRel);
+                records.push(...(res.entities || []));
+            }
+            return records;
+        } catch(e) { return []; }
+    };
+
+    window.exportToCSV = () => {
+        try {
+            const query = STATE.searchQuery.toLowerCase();
+            const filtered = STATE.nodes.filter(n => n.source !== 'ai' && STATE.activeDisplayNames.has(n.displayName));
+            if (!filtered.length) { window.notify("No data to export."); return; }
+            const rows = filtered.slice(0, EXPORT_CAP).map(n => [ n.date ? n.date.toISOString() : "", (n.normalizedType || "").toUpperCase(), n.state || "", n.owner || "", n.title || "", (n.description || "").replace(/<[^>]*>?/gm, '') ]);
+            const csv = ["Date,Type,Status,Owner,Subject,Description", ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+            const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+            link.download = `Interaction_History_${new Date().toISOString().slice(0,10)}.csv`;
+            link.click(); window.notify("Export complete");
+        } catch (error) { window.notify("Export failed"); }
+    };
+
+    window.bootstrap = async () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('days')) STATE.daysFilter = params.get('days');
+        if (params.has('search')) STATE.searchQuery = params.get('search');
+        if (params.has('tab')) STATE.activeTab = params.get('tab');
+        
+        const isPoppedOut = params.has('popped') || !!window.opener;
+        if (isPoppedOut) {
+            document.getElementById('btnCloseWindow').style.display = 'flex';
+            document.getElementById('popoutControls').style.display = 'none';
+        }
+
+        const overlay = document.getElementById('loadingOverlay') || document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.innerHTML = `<div style="font-size:32px;">⏳</div><div>Syncing interactions...</div>`;
+        if (!document.getElementById('loadingOverlay')) document.body.appendChild(overlay);
+        
+        try {
+            const Xrm = window.safeGetXrm();
+            
+            // Context discovery priority
+            let regardingId = window.getUrlParameter('id') || window.getUrlParameter('recordId');
+            
+            if (!regardingId && Xrm?.Utility?.getPageContext) {
+                const pc = Xrm.Utility.getPageContext();
+                regardingId = pc?.input?.entityId || pc?.input?.recordId;
+            }
+            if (!regardingId && window.opener?.Xrm?.Page?.data?.entity) {
+                regardingId = window.opener.Xrm.Page.data.entity.getId();
+            }
+            if (!regardingId && Xrm?.Page?.data?.entity) {
+                regardingId = Xrm.Page.data.entity.getId();
+            }
+            
+            regardingId = regardingId ? regardingId.replace(/{|}/g, "").toLowerCase() : null;
+
+            if (Xrm && regardingId) {
+                const badge = document.getElementById('dataStatusBadge');
+                badge.innerText = "Live Dataverse Link"; badge.className = "data-status-badge status-live";
+                const startDate = new Date(); startDate.setDate(startDate.getDate() - Number(STATE.daysFilter));
+                
+                const isPopTab = params.has('popped');
+                
+                const actSelect = `$select=activityid,subject,description,createdon,scheduledstart,activitytypecode,statecode,actualdurationminutes,prioritycode,_regardingobjectid_value,_ownerid_value`;
+                const noteSelect = `$select=annotationid,subject,notetext,createdon,_ownerid_value`;
+
+                const activityQuery = isPopTab 
+                    ? `?${actSelect}&$filter=(_regardingobjectid_value eq ${regardingId})&$orderby=createdon asc&$top=1000`
+                    : `?${actSelect}&$filter=(_regardingobjectid_value eq ${regardingId}) and (createdon ge ${startDate.toISOString()})&$orderby=createdon asc`;
+                
+                const noteQuery = isPopTab
+                    ? `?${noteSelect}&$filter=(_objectid_value eq ${regardingId})&$orderby=createdon asc&$top=1000`
+                    : `?${noteSelect}&$filter=(_objectid_value eq ${regardingId}) and (createdon ge ${startDate.toISOString()})&$orderby=createdon asc`;
+                
+                let [activities, notes] = await Promise.all([ window.fetchPagedData(Xrm, "activitypointer", activityQuery), window.fetchPagedData(Xrm, "annotation", noteQuery) ]);
+                
+                if (activities.length < 15 || notes.length < 15) {
+                    window.diagLog("Density check: Merging broad historical fallback...");
+                    const broadAct = await window.fetchPagedData(Xrm, "activitypointer", `?${actSelect}&$filter=(_regardingobjectid_value eq ${regardingId})&$top=600`);
+                    activities = [...activities, ...broadAct.filter(ba => !activities.some(a => a.activityid === ba.activityid))];
+                }
+
+                const allRaw = [
+                    ...activities.map(a => ({
+                        id: String(a.activityid), title: a.subject || "No Subject", description: a.description || "",
+                        date: new Date(a.scheduledstart || a.createdon), rawType: a.activitytypecode, 
+                        entityName: typeof a.activitytypecode === 'number' ? (ENTITY_MAP[a.activitytypecode]?.toLowerCase().replace(' ', '') || 'activitypointer') : a.activitytypecode,
+                        normalizedType: window.normalizeType(a.activitytypecode, a.subject, a.description),
+                        displayName: ENTITY_MAP[Number(a.activitytypecode)] || a["activitytypecode@OData.Community.Display.V1.FormattedValue"] || "Interaction",
+                        source: 'dataverse', state: a["statecode@OData.Community.Display.V1.FormattedValue"] || "",
+                        owner: a["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || "Unknown"
+                    })),
+                    ...notes.map(n => ({
+                        id: String(n.annotationid), title: n.subject || "Note Entry", description: n.notetext || "No content.",
+                        date: new Date(n.createdon), rawType: "annotation", normalizedType: "note", displayName: "Note",
+                        entityName: "annotation", source: 'dataverse', state: "Notes", owner: n["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || "Unknown", initials: window.getInitials(n["_ownerid_value@OData.Community.Display.V1.FormattedValue"])
+                    }))
+                ];
+                STATE.nodes = allRaw.sort((a,b) => a.date - b.date);
+            } else { 
+                STATE.nodes = window.getSampleData().sort((a,b) => a.date - b.date); 
+                document.getElementById('dataStatusBadge').innerText = "Demo Mode: ID Resolution Fail";
+            }
+            
+            STATE.allDisplayNamesFound = new Set(STATE.nodes.map(n => n.displayName));
+            if (STATE.activeDisplayNames.size === 0) STATE.activeDisplayNames = new Set(STATE.allDisplayNamesFound);
+            const aiNodes = window.runHeuristics(STATE.nodes);
+            STATE.nodes = [...STATE.nodes, ...aiNodes].sort((a,b) => a.date - b.date);
+            
+            if (STATE.activeTab !== 'journey') window.switchTab(STATE.activeTab);
+            window.renderFilters(); window.render();
+            document.getElementById('statusBadge').innerText = `${STATE.nodes.filter(n=>n.source!=='ai').length} interaction(s) loaded`;
+        } catch (e) { 
+            window.diagLog(`Sync failed: ${e.message}`, "err");
+            document.getElementById('statusBadge').innerText = "Sync Error"; 
+        }
+        finally { if (document.getElementById('loadingOverlay')) document.getElementById('loadingOverlay').remove(); }
+    };
+
+    window.runHeuristics = (nodes) => {
+        const insights = [];
+        nodes.forEach(node => {
+            if (node.normalizedType === 'system' || node.normalizedType === 'note') return;
+            const text = (node.title + " " + node.description).toLowerCase();
+            const sentiment = text.includes("angry") || text.includes("complaint") ? 'negative' : (text.includes("thanks") || text.includes("great") ? 'positive' : null);
+            if (sentiment) {
+                insights.push({ id: `ai-${node.id}`, title: `AI Sentiment Insight`, date: new Date(node.date.getTime() + 1000 * 60 * 15), normalizedType: sentiment === 'negative' ? 'ai_negative' : 'ai_positive', source: 'ai', sentimentType: sentiment, displayName: "AI Analysis", description: `Detected ${sentiment} tone in this interaction.` });
+                node.sentimentType = sentiment;
+            }
+        });
+        return insights;
+    };
+
+    window.switchTab = (tab) => {
+        STATE.activeTab = tab;
+        document.getElementById('tabJourney').className = `tab-btn ${tab === 'journey' ? 'active' : ''}`;
+        document.getElementById('tabList').className = `tab-btn ${tab === 'list' ? 'active' : ''}`;
+        document.getElementById('viewJourney').style.display = tab === 'journey' ? 'flex' : 'none';
+        document.getElementById('viewList').style.display = tab === 'list' ? 'block' : 'none';
+        window.render();
+    };
+
+    window.renderFilters = () => {
+        const container = document.getElementById("typeFilters");
+        container.innerHTML = "";
+        const counts = {}; 
+        STATE.nodes.forEach(n => { if(n.source !== 'ai') counts[n.displayName] = (counts[n.displayName] || 0) + 1; });
+        const allBtn = document.createElement("button");
+        const isShowingAll = STATE.activeDisplayNames.size === STATE.allDisplayNamesFound.size;
+        allBtn.className = `type-chip ${isShowingAll ? 'active' : ''}`;
+        allBtn.innerHTML = `Show All <span class="chip-count">${Object.values(counts).reduce((a,b)=>a+b, 0)}</span>`;
+        allBtn.onclick = () => {
+            if (isShowingAll) { STATE.activeDisplayNames = new Set(); } 
+            else { STATE.activeDisplayNames = new Set(STATE.allDisplayNamesFound); }
+            window.renderFilters(); window.render();
+        };
+        container.appendChild(allBtn);
+        Array.from(STATE.allDisplayNamesFound).sort().forEach(name => {
+            const chip = document.createElement("button");
+            chip.className = `type-chip ${STATE.activeDisplayNames.has(name) ? 'active' : ''}`;
+            chip.innerHTML = `${window.sanitizeHTML(String(name))} <span class="chip-count">${counts[name] || 0}</span>`;
+            chip.onclick = () => {
+                if (STATE.activeDisplayNames.has(name)) { STATE.activeDisplayNames.delete(name); }
+                else { STATE.activeDisplayNames.add(name); }
+                window.renderFilters(); window.render();
+            };
+            container.appendChild(chip);
+        });
+    };
+
+    window.render = () => {
+        const query = STATE.searchQuery.toLowerCase();
+        const filtered = STATE.nodes.filter(n => {
+            const matchSearch = (n.title + ' ' + n.description).toLowerCase().includes(query);
+            const matchType = n.source === 'ai' || STATE.activeDisplayNames.has(n.displayName);
+            return matchSearch && matchType;
+        });
+        document.getElementById('countBadge').innerText = filtered.filter(n=>n.source!=='ai').length;
+        if (STATE.activeTab === 'journey') renderJourney(filtered); else renderList(filtered);
+    };
+
+    function renderJourney(nodes) {
+        const canvas = document.getElementById("timelineCanvas");
+        canvas.querySelectorAll('.node').forEach(n => n.remove());
+        if (!nodes.length) return;
+        try {
+            const totalNodes = nodes.length;
+            const start = nodes[0].date.getTime();
+            const end = nodes[totalNodes - 1].date.getTime();
+            const duration = end - start || 1;
+            const lanes = [];
+            const frag = document.createDocumentFragment();
+            nodes.forEach((node, index) => {
+                const posPct = (index / (totalNodes <= 1 ? 1 : totalNodes - 1)) * 75 + 12.5;
+                let laneIndex = 0; while ((lanes[laneIndex] ?? -999) > (posPct - 12) && laneIndex < (MAX_LANES - 1)) laneIndex++;
+                lanes[laneIndex] = posPct;
+                const nodeEl = document.createElement("div");
+                nodeEl.className = "node"; nodeEl.style.left = `${posPct}%`; nodeEl.style.top = `${60 + (laneIndex * 115)}px`;
+                nodeEl.setAttribute('tabindex', '0');
+                nodeEl.addEventListener('click', () => window.showDetails(node));
+                const ctx = window.getTemporalContext(node.date);
+                nodeEl.innerHTML = `
+                    <div class="node-row">
+                        <div class="node-icon">${node.normalizedType === 'note' && node.initials ? `<span style="font-size:10px; font-weight:800">${node.initials}</span>` : (ICONS[node.normalizedType] || ICONS.default)}</div>
+                        <div class="node-side-meta"><strong>${ctx.d}</strong>${STATE.showTime ? `<span style="opacity:0.7">${ctx.t}</span>` : ''}</div>
+                    </div>
+                    <div class="node-label">${window.sanitizeHTML(node.title)}</div>
+                `;
+                frag.appendChild(nodeEl);
+            });
+            canvas.appendChild(frag);
+            canvas.style.height = `${Math.min(lanes.length || 1, MAX_LANES) * 115 + 150}px`;
+        } catch(e) {}
+    }
+
+    function renderList(nodes) {
+        const container = document.getElementById('listContent'); container.innerHTML = "";
+        const frag = document.createDocumentFragment();
+        nodes.filter(n => n.source !== 'ai').forEach(node => {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            const ctx = window.getTemporalContext(node.date);
+            item.innerHTML = `
+                <div class="list-icon-circle" style="width:34px; height:34px; border:2.5px solid var(--dn-neutral-light); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${node.normalizedType === 'note' && node.initials ? `<span style="font-size:10px; font-weight:800">${node.initials}</span>` : (ICONS[node.normalizedType] || ICONS.default)}</div>
+                <div class="list-card" role="button" tabindex="0">
+                    <div style="display:flex; justify-content:space-between; align-items: flex-start;"><div style="flex:1;"><span style="font-weight:600;">${window.sanitizeHTML(node.title)}</span></div><span style="font-size:11px; color:var(--dn-neutral-secondary); background:var(--dn-neutral-light); padding:2px 6px; border-radius:4px;">${ctx.d}</span></div>
+                    <div style="font-size:11px; color:var(--dn-neutral-primary); font-weight:600; margin-top:4px;">${window.sanitizeHTML(node.displayName)}</div>
+                </div>
+            `;
+            item.querySelector('.list-card').addEventListener('click', () => window.showDetails(node.id));
+            frag.appendChild(item);
+        });
+        container.appendChild(frag);
+    }
+
+    window.setFontSize = (sz, btn) => {
+        STATE.panelFontSize = sz;
+        document.querySelectorAll('.readability-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        const desc = document.querySelector('.detail-description-html');
+        if (desc) { desc.classList.remove('font-sz-sm', 'font-sz-md', 'font-sz-lg'); desc.classList.add(`font-sz-${sz}`); }
+    };
+
+    window.showDetails = (nodeOrId) => {
+        const node = typeof nodeOrId === 'string' ? STATE.nodes.find(n => n.id === nodeOrId) : nodeOrId;
+        if (!node) return;
+        document.getElementById("detailsPlaceholder").style.display = "none";
+        const contentContainer = document.getElementById("detailsContent");
+        contentContainer.style.display = "block";
+        document.getElementById('readabilityCtrl').style.visibility = 'visible';
+        contentContainer.innerHTML = ""; 
+        const section = document.createElement('div');
+        section.className = 'detail-section';
+        const card1 = document.createElement('div');
+        card1.className = 'detail-card';
+        card1.innerHTML = `<span style="font-size:11px; text-transform:uppercase; color:var(--dn-neutral-secondary)">Context Analytics</span><strong style="display:block; font-size:14px; margin-bottom:4px;">${window.sanitizeHTML(node.displayName)}</strong><div class="details-grid"><div class="detail-item"><span class="detail-label">Owner</span><span class="detail-value">${window.sanitizeHTML(node.owner || 'Unknown')}</span></div><div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">${window.sanitizeHTML(node.state || 'N/A')}</span></div></div>`;
+        const card2 = document.createElement('div');
+        card2.className = 'detail-card'; card2.style.background = 'white';
+        const ctx = window.getTemporalContext(node.date);
+        card2.innerHTML = `<div style="display:flex; justify-content:space-between;"><span style="font-weight:600;">${window.sanitizeHTML(node.title)}</span><span style="font-size:10px; background:#f3f2f1; padding:2px 6px; border-radius:4px;">${ctx.d} ${ctx.t}</span></div>`;
+        const descContainer = document.createElement('div');
+        descContainer.className = `detail-description-html font-sz-${STATE.panelFontSize}`;
+        descContainer.innerHTML = window.interpretHTML(node.description, STATE.searchQuery) || "<em>No content provided.</em>";
+        card2.appendChild(descContainer);
+        const actions = document.createElement('div');
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn outline'; copyBtn.innerHTML = 'Copy Body';
+        copyBtn.onclick = () => { const el = document.createElement('textarea'); el.value = descContainer.innerText; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); window.notify("Copied!"); };
+        actions.appendChild(copyBtn); card2.appendChild(actions);
+        section.appendChild(card1); section.appendChild(card2);
+        if (node.source !== 'ai') {
+            const actionsGrid = document.createElement('div');
+            actionsGrid.style.display = 'grid'; actionsGrid.style.gridTemplateColumns = '1fr'; actionsGrid.style.gap = '8px';
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'btn primary'; viewBtn.innerHTML = 'View Record'; 
+            viewBtn.onclick = () => window.openRecord(node.entityName, node.id, 1);
+            actionsGrid.appendChild(viewBtn); 
+            section.appendChild(actionsGrid);
+        }
+        contentContainer.appendChild(section);
+        document.getElementById("detailsBody").scrollTop = 0;
+    };
+
+    window.openRecord = (logicalName, id, targetType) => {
+        const Xrm = window.safeGetXrm();
+        if (!Xrm || !Xrm.Navigation) return;
+        const cleanId = id.replace(/{|}/g, "");
+        let targetEntity = logicalName || 'activitypointer';
+        if (logicalName === 'note') targetEntity = 'annotation';
+        const pageInput = { pageType: "entityrecord", entityName: targetEntity, entityId: cleanId };
+        const options = targetType === 2 ? { target: 2 } : { target: 2, position: 1, width: { value: 95, unit: "%" }, height: { value: 95, unit: "%" } };
+        Xrm.Navigation.navigateTo(pageInput, options).catch(() => {
+            Xrm.Navigation.openForm({ entityName: targetEntity, entityId: cleanId });
+        });
+    };
+
+    window.popOutTimeline = (mode) => {
+        const Xrm = window.safeGetXrm();
+        const search = encodeURIComponent(STATE.searchQuery);
+        const currentId = window.getUrlParameter('id') || window.getUrlParameter('recordId');
+        const url = `${window.location.href.split('?')[0]}?id=${currentId}&days=${STATE.daysFilter}&search=${search}&tab=${STATE.activeTab}&popped=true`;
+        if (mode === 'tab') { window.open(url, '_blank'); } 
+        else if (Xrm && Xrm.Navigation) {
+            let resourceName = "activity_timeline.html"; 
+            try { const loc = window.location.href; if (loc.includes('webresources/')) resourceName = loc.split('webresources/')[1].split('?')[0].split('#')[0]; } catch(e){}
+            const pageInput = { pageType: "webresource", webresourceName: resourceName, data: `id=${currentId}&days=${STATE.daysFilter}&search=${search}&tab=${STATE.activeTab}&popped=true` };
+            Xrm.Navigation.navigateTo(pageInput, { target: 2, position: 1, width: { value: 98, unit: "%" }, height: { value: 98, unit: "%" } }).catch(() => window.open(url, '_blank'));
+        }
+    };
+
+    window.normalizeType = (v, sub = "", desc = "") => {
+        let b = 'custom'; const t = (sub + ' ' + desc).toLowerCase();
+        if (typeof v === 'string') { const s = v.toLowerCase(); if (['phonecall','email','task','appointment','chat','incidentresolution','annotation','adx_portalcomment','letter','voicemail'].includes(s)) b = s === 'incidentresolution' ? 'system' : (s === 'annotation' ? 'note' : s); } 
+        else { const m = { 4210: 'phonecall', 4200: 'email', 4202: 'task', 4201: 'appointment', 4216: 'chat', 4207: 'letter', 4214: 'voicemail' }; b = m[v] || 'custom'; }
+        if (['phonecall','email','chat','appointment','note','adx_portalcomment','letter','voicemail'].includes(b)) return b;
+        if (['workflow','auto-generated','resolution'].some(k => t.includes(k))) return 'system';
+        return b;
+    };
+
+    window.handleFilterChange = () => { STATE.nodes = []; STATE.daysFilter = document.getElementById('daysFilter').value; window.bootstrap(); };
+    window.handleZoomChange = () => { STATE.canvasWidth = document.getElementById('zoomSlider').value; window.render(); };
+    window.handleTimeToggle = () => { STATE.showTime = document.getElementById('timeToggle').checked; window.render(); };
+    window.handleSearch = () => { if (searchTimeout) clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { STATE.searchQuery = document.getElementById('searchInput').value; window.render(); }, 150); };
+    window.notify = (m) => { const h = document.getElementById("notificationHost"); const e = document.createElement("div"); e.className = "notification"; e.innerText = m; h.appendChild(e); setTimeout(()=>e.remove(), 2500); };
+    
+    /** v2.7.0 Integrated Diagnostic Toggle */
+    window.toggleDiagnostics = () => { 
+        const el = document.getElementById('diagnosticConsole'); 
+        if (el) el.style.display = el.style.display === 'flex' ? 'none' : 'flex'; 
+    };
+    
+    window.copyLogs = () => { 
+        const text = document.getElementById('diagLog').innerText; 
+        const ta = document.createElement('textarea'); ta.value = text; 
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); 
+        document.body.removeChild(ta); window.notify("Logs copied!"); 
+    };
+
+    window.getSampleData = () => {
+        const n = new Date(); const d = (v) => new Date(n - 1000*60*60*24*v);
+        return [
+            { id: "1", title: "Archive History Sync", description: "Internal project baseline data.", date: d(10), normalizedType: "note", displayName: "Note", entityName: "annotation", state: "Completed", owner: "Brad Law", initials: "BL" },
+            { id: "2", title: "Diagnostic Session", description: "<div><strong>HTML Interpretation Active</strong><p>Summary formatting enabled.</p></div>", date: d(1), normalizedType: "appointment", displayName: "Appointment", entityName: "appointment", state: "Scheduled", owner: "Support Tier 1" }
+        ];
+    };
+
+    document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('searchInput').focus(); } if (e.key === 'Escape') { const s = document.getElementById('searchInput'); if (s.value !== "") { s.value = ""; STATE.searchQuery = ""; window.render(); } } });
+
+    document.getElementById('btnSync').addEventListener('click', window.bootstrap);
+    document.getElementById('btnExport').addEventListener('click', window.exportToCSV);
+    document.getElementById('btnPopoutTab').addEventListener('click', () => window.popOutTimeline('tab'));
+    document.getElementById('btnPopoutDialog').addEventListener('click', () => window.popOutTimeline('dialog'));
+    document.getElementById('btnCloseWindow').addEventListener('click', () => { 
+        const Xrm = window.safeGetXrm(); if (Xrm && Xrm.Navigation && Xrm.Navigation.close) Xrm.Navigation.close(); else window.close();
+    });
+
+    // Initialize environment policies and bootstrap
+    window.applyEnvironmentPolicies();
+    window.bootstrap();
+</script>
+</body>
+</html>
