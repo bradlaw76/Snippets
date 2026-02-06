@@ -1,0 +1,11 @@
+{
+  "name": "VA - D365 Chat Widget - Compact Loader (Power Pages Compatible)",
+  "version": "2.0.0.",
+  "description": "From Maurcio's Tool",
+  "category": "Contact Center Widget",
+  "language": "html",
+  "status": "working",
+  "tags": [],
+  "timestamp": "2026-02-06T16:49:31.107Z",
+  "code": "<!-- D365 Chat Widget - Compact Loader (Power Pages Compatible) -->\n<!-- Generated: 2/5/2026 | Size: ~1.5KB -->\n<script>\nwindow.D365WidgetConfig={\"orgId\":\"23c66f04-0260-ef11-a66d-002248255718\",\"orgUrl\":\"https://m-23c66f04-0260-ef11-a66d-002248255718.us.omnichannelengagementhub.com\",\"widgetId\":\"56093f2f-dfda-4b4b-ac95-94c0ebdf64a1\",\"headerTitle\":\"Veteran Affairs\",\"headerLogo\":\"https://cdn.freebiesupply.com/logos/large/2x/department-of-veterans-affairs-1-logo-png-transparent.png\",\"gradientStart\":\"#164e63\",\"gradientEnd\":\"#0e7490\",\"primaryColor\":\"#164e63\",\"userBubbleColor\":\"#164e63\",\"launcherColor\":\"#164e63\",\"sendBtnColor\":\"#164e63\",\"prechatSolidColor\":\"#164e63\",\"prechatGradientStart\":\"#164e63\",\"prechatGradientEnd\":\"#0e7490\",\"agentAvatar\":\"https://raw.githubusercontent.com/moliveirapinto/d365-modern-chat-widget/main/img/headshots/headshot_male4.png\",\"customerAvatar\":\"https://raw.githubusercontent.com/moliveirapinto/d365-modern-chat-widget/main/img/headshots/headshot_male3.png\",\"botAvatar\":\"https://raw.githubusercontent.com/moliveirapinto/d365-modern-chat-widget/main/img/bot/bot1.png\",\"welcomeTitle\":\"Start a conversation\",\"welcomeMessage\":\"We're here to help! Please fill out the form below to start chatting with our team.\",\"nameFieldLabel\":\"Your Name\",\"emailFieldLabel\":\"Email Address\"};\n(function(){var s=document.createElement('script');s.src='https://moliveirapinto.github.io/d365-modern-chat-widget/dist/widget-core.js?v=1770305410806';document.head.appendChild(s);})();\n</script>"
+}
