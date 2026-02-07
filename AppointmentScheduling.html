@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Appointment Scheduling | Federal Benefit Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
+            background-color: #f0f3f5;
+            color: #1b1b1b;
+        }
+
+        .usa-banner {
+            background-color: #f0f0f0;
+            font-size: 0.75rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .usa-header {
+            background-color: #005ea2;
+            color: white;
+            border-bottom: 4px solid #1a4480;
+        }
+
+        .card-active {
+            border: 2px solid #005ea2;
+            background-color: #f8fbff;
+        }
+
+        .step-indicator {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background-color: #005ea2;
+            color: white;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #1a4480;
+        }
+
+        .btn-outline {
+            border: 2px solid #005ea2;
+            color: #005ea2;
+        }
+
+        /* Custom Calendar Styling */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+
+        .time-pill:hover {
+            background-color: #e1f3ff;
+            border-color: #005ea2;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Official Government Banner -->
+    <div class="usa-banner">
+        <div class="max-w-4xl mx-auto flex items-center">
+            <img src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="US Flag" class="w-4 h-auto mr-2">
+            <span>An official website of the United States government</span>
+        </div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="usa-header p-4 shadow-md">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-2xl font-bold tracking-tight">Secure Appointment Scheduling</h1>
+            <div class="flex items-center mt-1 text-sm opacity-90">
+                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 4.925-3.467 9.47-8 10.655-4.533-1.18-8-5.73-8-10.655 0-.68.056-1.35.166-2.001zm8.254 9.175a.75.75 0 11-1.44-.411 5.756 5.756 0 00.354-2.1c0-.83-.335-1.58-.879-2.124-.544-.544-1.294-.879-2.124-.879A5.75 5.75 0 005.15 9.87a.75.75 0 01-1.35-.658 7.25 7.25 0 011.83-2.628 7.25 7.25 0 012.628-1.83.75.75 0 01.658 1.35 5.753 5.753 0 00-1.24.879 5.753 5.753 0 00-.879 1.24.75.75 0 01-1.35-.658zm7.11-2.628a7.25 7.25 0 00-1.83-2.628 7.25 7.25 0 00-2.628-1.83.75.75 0 00-.658 1.35 5.753 5.753 0 011.24.879 5.753 5.753 0 01.879 1.24.75.75 0 001.35.658z" clip-rule="evenodd" />
+                </svg>
+                <span>You are signed in and identity verified via ID.me</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- Step Indicator -->
+        <div class="flex items-center mb-8 space-x-4 overflow-x-auto pb-2">
+            <div class="flex items-center flex-shrink-0">
+                <span class="step-indicator bg-blue-700 text-white mr-2">1</span>
+                <span class="font-semibold">Service</span>
+            </div>
+            <div class="h-px bg-gray-300 flex-grow min-w-[20px]"></div>
+            <div class="flex items-center flex-shrink-0">
+                <span class="step-indicator bg-gray-200 text-gray-600 mr-2">2</span>
+                <span class="text-gray-500">Time Slot</span>
+            </div>
+            <div class="h-px bg-gray-300 flex-grow min-w-[20px]"></div>
+            <div class="flex items-center flex-shrink-0">
+                <span class="step-indicator bg-gray-200 text-gray-600 mr-2">3</span>
+                <span class="text-gray-500">Review</span>
+            </div>
+        </div>
+
+        <section id="step-1" class="space-y-6">
+            <div class="prose max-w-none">
+                <h2 class="text-2xl font-bold">Select a Service</h2>
+                <p class="text-gray-600">Choose the reason for your appointment to ensure we have the right specialist available to help you.</p>
+            </div>
+
+            <!-- Service Cards -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <!-- Card 1 -->
+                <button onclick="selectService(this, 'Disability Claim')" class="text-left bg-white p-6 rounded-lg border-2 border-transparent shadow-sm hover:shadow-md transition-all group">
+                    <div class="flex items-start justify-between">
+                        <div class="p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100">
+                            <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">30 MIN</span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-bold">Discuss my disability claim</h3>
+                    <p class="mt-2 text-sm text-gray-600">Review status updates, pending documentation, or medical evidence requirements.</p>
+                    <div class="mt-4 flex items-center text-xs text-blue-600 font-semibold">
+                        <span class="flex items-center mr-3"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg> Phone</span>
+                        <span class="flex items-center"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm14 0H4v8h12V6z"></path></svg> Video</span>
+                    </div>
+                </button>
+
+                <!-- Card 2 -->
+                <button onclick="selectService(this, 'Retirement Benefits')" class="text-left bg-white p-6 rounded-lg border-2 border-transparent shadow-sm hover:shadow-md transition-all group">
+                    <div class="flex items-start justify-between">
+                        <div class="p-3 bg-green-50 rounded-lg group-hover:bg-green-100">
+                            <svg class="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">20 MIN</span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-bold">Review retirement benefits</h3>
+                    <p class="mt-2 text-sm text-gray-600">Get an estimate of your future benefits or clarify eligibility age requirements.</p>
+                    <div class="mt-4 flex items-center text-xs text-blue-600 font-semibold">
+                        <span class="flex items-center mr-3"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg> Phone</span>
+                    </div>
+                </button>
+
+                <!-- Card 3 -->
+                <button onclick="selectService(this, 'Personal Information')" class="text-left bg-white p-6 rounded-lg border-2 border-transparent shadow-sm hover:shadow-md transition-all group">
+                    <div class="flex items-start justify-between">
+                        <div class="p-3 bg-purple-50 rounded-lg group-hover:bg-purple-100">
+                            <svg class="w-6 h-6 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        </div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">15 MIN</span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-bold">Update personal information</h3>
+                    <p class="mt-2 text-sm text-gray-600">Change your address, contact details, or direct deposit banking info.</p>
+                    <div class="mt-4 flex items-center text-xs text-blue-600 font-semibold">
+                        <span class="flex items-center mr-3"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg> Phone</span>
+                        <span class="flex items-center"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg> In-person</span>
+                    </div>
+                </button>
+
+                <!-- Card 4 -->
+                <button onclick="selectService(this, 'Overpayment Notice')" class="text-left bg-white p-6 rounded-lg border-2 border-transparent shadow-sm hover:shadow-md transition-all group">
+                    <div class="flex items-start justify-between">
+                        <div class="p-3 bg-red-50 rounded-lg group-hover:bg-red-100">
+                            <svg class="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        </div>
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">30 MIN</span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-bold">Overpayment or notice discussion</h3>
+                    <p class="mt-2 text-sm text-gray-600">Resolve questions regarding a notice you received or discuss repayment plans.</p>
+                    <div class="mt-4 flex items-center text-xs text-blue-600 font-semibold">
+                        <span class="flex items-center"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg> In-person</span>
+                    </div>
+                </button>
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button onclick="goToStep(2)" id="next-1" disabled class="px-8 py-3 rounded-lg bg-gray-300 text-gray-500 font-bold cursor-not-allowed transition-all">Continue to Calendar</button>
+            </div>
+        </section>
+
+        <!-- Time Selection Section (Hidden Initially) -->
+        <section id="step-2" class="hidden space-y-6">
+            <div class="prose max-w-none">
+                <h2 class="text-2xl font-bold">Choose a Date and Time</h2>
+                <p class="text-gray-600">Available slots are displayed based on current specialist availability. All times are in <span class="font-bold text-black underline decoration-blue-500">Eastern Standard Time (EST)</span>.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8 items-start">
+                <!-- Simple Calendar View -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="font-bold text-lg">February 2026</span>
+                        <div class="flex space-x-2">
+                            <button class="p-1 rounded hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                            <button class="p-1 rounded hover:bg-gray-100"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 text-center text-xs font-bold text-gray-400 mb-2">
+                        <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
+                    </div>
+                    <div class="calendar-grid text-sm">
+                        <!-- Empty slots for previous month -->
+                        <div class="p-2 text-gray-300">25</div>
+                        <div class="p-2 text-gray-300">26</div>
+                        <div class="p-2 text-gray-300">27</div>
+                        <div class="p-2 text-gray-300">28</div>
+                        <div class="p-2 text-gray-300">29</div>
+                        <div class="p-2 text-gray-300">30</div>
+                        <div class="p-2 text-gray-300">31</div>
+                        <!-- Current Month -->
+                        <button class="p-2 bg-gray-50 rounded-full font-bold">1</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">2</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">3</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">4</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">5</button>
+                        <button class="p-2 bg-blue-600 text-white rounded-full font-bold">6</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">7</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">8</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full font-bold">9</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">10</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">11</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">12</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">13</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">14</button>
+                        <button class="p-2 hover:bg-blue-50 rounded-full">15</button>
+                    </div>
+                </div>
+
+                <!-- Time Slots -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-gray-700">Available Slots for Feb 6</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="selectTime(this, '9:30 AM')" class="time-pill py-3 px-4 rounded border-2 border-gray-200 bg-white text-center font-semibold transition-all">9:30 AM</button>
+                        <button onclick="selectTime(this, '10:15 AM')" class="time-pill py-3 px-4 rounded border-2 border-gray-200 bg-white text-center font-semibold transition-all">10:15 AM</button>
+                        <button onclick="selectTime(this, '11:00 AM')" class="time-pill py-3 px-4 rounded border-2 border-gray-200 bg-white text-center font-semibold transition-all">11:00 AM</button>
+                        <button onclick="selectTime(this, '1:30 PM')" class="time-pill py-3 px-4 rounded border-2 border-gray-200 bg-white text-center font-semibold transition-all">1:30 PM</button>
+                        <button onclick="selectTime(this, '2:45 PM')" class="time-pill py-3 px-4 rounded border-2 border-gray-200 bg-white text-center font-semibold transition-all">2:45 PM</button>
+                        <button onclick="selectTime(this, '4:00 PM')" class="time-pill py-3 px-4 rounded border-2 border-gray-200 bg-white text-center font-semibold transition-all">4:00 PM</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between pt-8 border-t border-gray-200">
+                <button onclick="goToStep(1)" class="px-6 py-3 font-bold text-blue-700 hover:underline">Back to Service</button>
+                <button onclick="goToStep(3)" id="next-2" disabled class="px-8 py-3 rounded-lg bg-gray-300 text-gray-500 font-bold cursor-not-allowed transition-all">Review Appointment</button>
+            </div>
+        </section>
+
+        <!-- Summary & Review Section (Hidden Initially) -->
+        <section id="step-3" class="hidden space-y-6">
+            <div class="prose max-w-none">
+                <h2 class="text-2xl font-bold">Review and Confirm</h2>
+                <p class="text-gray-600">Please verify your appointment details below before confirming.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="bg-blue-50 p-6 border-b border-gray-200">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <p class="text-xs uppercase font-bold text-blue-600 mb-1">Service Type</p>
+                            <p id="summary-service" class="font-bold text-lg text-gray-900">—</p>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase font-bold text-blue-600 mb-1">Appointment Date</p>
+                            <p id="summary-date" class="font-bold text-lg text-gray-900">Friday, Feb 6, 2026</p>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase font-bold text-blue-600 mb-1">Start Time</p>
+                            <p id="summary-time" class="font-bold text-lg text-gray-900">—</p>
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase font-bold text-blue-600 mb-1">Meeting Channel</p>
+                            <p class="font-bold text-lg text-gray-900">Phone (Outbound)</p>
+                            <p class="text-xs text-gray-500">We will call you at your verified number.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="bg-gray-50 p-4 rounded border border-gray-200 flex items-start">
+                        <svg class="w-5 h-5 text-gray-400 mr-3 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <div class="text-sm text-gray-600">
+                            <p class="font-bold text-gray-900">Privacy Notice</p>
+                            <p>Information provided is protected under the Privacy Act. Your data is used solely to facilitate this appointment. No agent names or internal case identifiers are displayed for security.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row-reverse gap-4 pt-8">
+                <button onclick="showConfirmation()" class="btn-primary px-8 py-4 rounded-lg font-bold shadow-lg text-lg flex-1">Confirm Appointment</button>
+                <button onclick="goToStep(2)" class="btn-outline px-8 py-4 rounded-lg font-bold flex-1">Change Time</button>
+            </div>
+        </section>
+
+        <!-- Final Confirmation State (Hidden Initially) -->
+        <section id="confirmation" class="hidden text-center space-y-8 py-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <div class="prose max-w-none">
+                <h2 class="text-4xl font-bold">Appointment Confirmed</h2>
+                <p class="text-xl text-gray-600 max-w-lg mx-auto">Your appointment has been successfully scheduled. A confirmation has been sent to your verified email address.</p>
+            </div>
+            
+            <div class="bg-white border-2 border-dashed border-gray-200 rounded-xl p-8 max-w-md mx-auto">
+                <p class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Confirmation ID</p>
+                <p class="text-3xl font-mono font-bold text-blue-800">SSA-88291-TX</p>
+            </div>
+
+            <div class="space-y-4 pt-8">
+                <p class="font-bold">What happens next?</p>
+                <ul class="text-left max-w-md mx-auto space-y-4 text-gray-700">
+                    <li class="flex items-start">
+                        <span class="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-1">1</span>
+                        <span>Receive a secure link to upload any supporting documents before your meeting.</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mr-3 mt-1">2</span>
+                        <span>A specialist will call you at the scheduled time using the phone number on file.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <button onclick="location.reload()" class="mt-12 text-blue-700 font-bold hover:underline">Return to Dashboard</button>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-20 border-t border-gray-300 bg-white py-12 px-4">
+        <div class="max-w-4xl mx-auto grid md:grid-cols-3 gap-8 text-sm text-gray-600">
+            <div>
+                <p class="font-bold text-gray-900 mb-4">About This Portal</p>
+                <p>This is a secure government site. All information is encrypted and transmitted securely.</p>
+            </div>
+            <div>
+                <p class="font-bold text-gray-900 mb-4">Accessibility</p>
+                <p>This page is designed to be accessible to everyone and complies with Section 508 standards.</p>
+            </div>
+            <div>
+                <p class="font-bold text-gray-900 mb-4">Language</p>
+                <a href="#" class="text-blue-700 underline">Español</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Annotations / UX Decisions Panel (For Developer/Stakeholder Review) -->
+    <div id="annotations-panel" class="fixed bottom-4 right-4 bg-gray-900 text-white p-4 rounded-lg shadow-2xl max-w-xs text-xs opacity-80 hover:opacity-100 transition-opacity">
+        <div class="flex justify-between items-center mb-2">
+            <h4 class="font-bold uppercase tracking-wider text-blue-400">UX Design Notes</h4>
+            <button onclick="document.getElementById('annotations-panel').remove()" class="text-gray-400 hover:text-white">✕</button>
+        </div>
+        <ul class="space-y-2 list-disc pl-3">
+            <li><strong>Progressive Disclosure:</strong> Steps are hidden until requirements (service/time) are met to reduce cognitive load.</li>
+            <li><strong>Anonymized Scheduling:</strong> "Specialists" are referenced generally. No agent names or IDs are shown to maintain internal security.</li>
+            <li><strong>Visual Cues:</strong> Government masthead and "Verified" status icons build immediate trust after identity handoff.</li>
+            <li><strong>Neutral Palette:</strong> USWDS-inspired blue (#005ea2) denotes official status without overwhelming brand bias.</li>
+        </ul>
+    </div>
+
+    <script>
+        let selectedServiceData = '';
+        let selectedTimeData = '';
+
+        function selectService(el, name) {
+            // Reset previous
+            document.querySelectorAll('#step-1 button').forEach(b => b.classList.remove('card-active'));
+            // Set new
+            el.classList.add('card-active');
+            selectedServiceData = name;
+            
+            // Enable next button
+            const nextBtn = document.getElementById('next-1');
+            nextBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            nextBtn.classList.add('bg-blue-700', 'text-white');
+            nextBtn.disabled = false;
+        }
+
+        function selectTime(el, time) {
+            // Reset previous
+            document.querySelectorAll('.time-pill').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                b.classList.add('bg-white', 'text-gray-900', 'border-gray-200');
+            });
+            // Set new
+            el.classList.remove('bg-white', 'text-gray-900', 'border-gray-200');
+            el.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+            selectedTimeData = time;
+
+            // Enable next button
+            const nextBtn = document.getElementById('next-2');
+            nextBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            nextBtn.classList.add('bg-blue-700', 'text-white');
+            nextBtn.disabled = false;
+        }
+
+        function goToStep(step) {
+            // Hide all steps
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('step-3').classList.add('hidden');
+            document.getElementById('confirmation').classList.add('hidden');
+
+            // Update indicators
+            const indicators = document.querySelectorAll('.step-indicator');
+            indicators.forEach((ind, i) => {
+                if (i + 1 < step) {
+                    ind.innerHTML = '✓';
+                    ind.classList.remove('bg-blue-700', 'bg-gray-200');
+                    ind.classList.add('bg-green-600');
+                } else if (i + 1 === step) {
+                    ind.innerHTML = step;
+                    ind.classList.remove('bg-green-600', 'bg-gray-200');
+                    ind.classList.add('bg-blue-700');
+                } else {
+                    ind.innerHTML = i + 1;
+                    ind.classList.remove('bg-green-600', 'bg-blue-700');
+                    ind.classList.add('bg-gray-200');
+                }
+            });
+
+            // Show target step
+            document.getElementById('step-' + step).classList.remove('hidden');
+
+            // Populate summary on step 3
+            if (step === 3) {
+                document.getElementById('summary-service').innerText = selectedServiceData;
+                document.getElementById('summary-time').innerText = selectedTimeData;
+            }
+
+            window.scrollTo(0, 0);
+        }
+
+        function showConfirmation() {
+            document.getElementById('step-3').classList.add('hidden');
+            document.getElementById('confirmation').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+    </script>
+</body>
+</html>
+
