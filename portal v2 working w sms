@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Service Portal | Full Interactive Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700;900&display=swap');
+        
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            background-color: #f0f3f5;
+            color: #1b1b1b;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .usa-banner { background-color: #f0f0f0; font-size: 0.75rem; padding: 0.5rem 1rem; }
+        .portal-header { background-color: #005ea2; color: white; border-bottom: 4px solid #1a4480; }
+        
+        /* ID.me Specific Styles */
+        .idme-header { background-color: white; border-bottom: 1px solid #e5e7eb; padding: 1.5rem; }
+        .idme-btn { background-color: #1c75bc; color: white; transition: background-color 0.2s; }
+        .idme-btn:hover { background-color: #155a8a; }
+        
+        .card-active { border: 2px solid #005ea2; background-color: #f8fbff; }
+        .step-indicator { width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center; border-radius: 9999px; font-weight: bold; }
+        
+        .hidden { display: none !important; }
+
+        /* Animation for screen transitions */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Terms screen styling matching screenshot 1000060546.jpg */
+        .terms-container {
+            max-width: 440px;
+            margin: 40px auto;
+            background: white;
+            border: 1px solid #dfe1e5;
+            border-radius: 4px;
+            padding: 48px 32px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        /* Dashboard specific styles (Ref: 1000060544.jpg) */
+        .earnings-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr) 48px;
+            gap: 4px;
+            height: 24px;
+        }
+        .benefit-card { border-left: 4px solid #005ea2; }
+        
+        /* Retirement Graph */
+        .graph-container {
+            height: 200px;
+            border-left: 1px solid #ccc;
+            border-bottom: 1px solid #ccc;
+            margin-top: 40px;
+            position: relative;
+        }
+        .graph-bar {
+            width: 40px;
+            background-color: #166534;
+            position: absolute;
+            bottom: 0;
+            border-radius: 2px 2px 0 0;
+        }
+        .graph-label { position: absolute; bottom: -25px; font-size: 11px; font-weight: bold; color: #666; width: 40px; text-align: center; }
+        .graph-value { position: absolute; top: -20px; font-size: 10px; font-weight: bold; width: 60px; text-align: center; left: -10px; }
+        
+        .btn-next { background-color: #2552d0; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Official Government Banner -->
+    <div class="usa-banner">
+        <div class="max-w-4xl mx-auto flex items-center">
+            <img src="https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" alt="US Flag" class="w-4 h-auto mr-2">
+            <span>An official website of the United States government</span>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="flex-grow flex flex-col">
+        
+        <!-- 1. SIGN IN CHOICE -->
+        <section id="view-login-choice" class="fade-in max-w-md mx-auto my-12 p-6 bg-white shadow-lg rounded-sm w-full">
+            <div class="flex justify-center mb-6">
+                <div class="flex items-center text-blue-900 font-bold text-xl">
+                    <svg class="w-8 h-8 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12V11a1 1 0 00.553.894l4.5 2.25a1 1 0 00.894 0l4.5-2.25A1 1 0 0016 11V10.12l1.69-.724a1 1 0 011.145 1.556l-7 7a1 1 0 01-1.68 0l-7-7a1 1 0 011.145-1.556z"/></svg>
+                    Public Service Portal
+                </div>
+            </div>
+            <h1 class="text-2xl font-bold mb-4">Sign In or Create an Account</h1>
+            <p class="text-sm mb-6 text-gray-700 leading-relaxed">By signing in or creating an account, you agree to the <a href="#" class="text-blue-700 underline font-semibold">Privacy Act Statement and Terms of Service</a>.</p>
+            
+            <div class="space-y-3">
+                <button onclick="navigate('redirect-warning')" class="w-full bg-[#112e51] text-white py-4 rounded font-bold flex items-center justify-center text-lg">
+                    Sign in with <span class="bg-red-600 px-1 ml-2 rounded text-[10px] flex items-center h-5"> <svg class="w-3 h-3 mr-1" fill="white" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 116 0v2H7V7z"/></svg> LOGIN.GOV</span>
+                </button>
+                <button onclick="navigate('redirect-warning')" class="w-full bg-[#00a91c] text-white py-4 rounded font-bold flex items-center justify-center text-lg">
+                    Sign in with <span class="ml-2 flex items-center italic font-black">ID<span class="text-sm">.me</span></span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. REDIRECT WARNING -->
+        <section id="view-redirect-warning" class="hidden fade-in max-w-lg mx-auto my-12 p-8 bg-white shadow-sm border border-gray-200">
+            <h2 class="text-2xl font-bold mb-6">You are leaving the Service Portal</h2>
+            <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
+                <p>If you select the "OK" button below, we will redirect you to ID.me's website.</p>
+                <p>ID.me is a trusted partner federally certified to provide secure digital identity verification to government agencies.</p>
+            </div>
+            <div class="mt-8 flex space-x-3">
+                <button onclick="navigate('idme-email')" class="bg-[#005ea2] text-white px-8 py-2 rounded font-semibold">OK</button>
+                <button onclick="navigate('login-choice')" class="border border-[#005ea2] text-[#005ea2] px-6 py-2 rounded font-semibold">Cancel</button>
+            </div>
+        </section>
+
+        <!-- 3. ID.ME EMAIL -->
+        <section id="view-idme-email" class="hidden fade-in bg-white flex-grow">
+            <div class="idme-header flex justify-center items-center">
+                <span class="text-2xl font-black italic text-blue-800">ID<span class="text-sm">.me</span></span>
+            </div>
+            <div class="max-w-sm mx-auto py-12 px-4">
+                <h2 class="text-3xl font-bold text-center mb-8 text-slate-800">Sign in to ID.me</h2>
+                <div class="mb-6">
+                    <label class="block font-bold text-gray-700 mb-2">Email</label>
+                    <input type="email" id="idme-email-input" value="tedbailey@outlook.com" class="w-full p-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button onclick="handleIdMeEmail()" class="idme-btn w-full py-4 rounded font-bold text-lg shadow-md text-white">Continue</button>
+            </div>
+        </section>
+
+        <!-- 4. ID.ME PASSWORD -->
+        <section id="view-idme-password" class="hidden fade-in bg-white flex-grow">
+            <div class="idme-header flex justify-center items-center">
+                <span class="text-2xl font-black italic text-blue-800">ID<span class="text-sm">.me</span></span>
+            </div>
+            <div class="max-w-sm mx-auto py-12 px-4">
+                <h2 class="text-3xl font-bold text-center mb-2 text-slate-800">Complete your sign-in</h2>
+                <p class="text-center text-gray-600 mb-8 font-semibold"><span id="user-display-email">tedbailey@outlook.com</span></p>
+                <div class="mb-4">
+                    <label class="block font-bold text-gray-700 mb-2">Password</label>
+                    <input type="password" value="tedspassword123" class="w-full p-4 border border-gray-300 rounded outline-none">
+                </div>
+                <button onclick="navigate('idme-mfa')" class="idme-btn w-full py-4 rounded font-bold text-lg shadow-md mt-6 text-white">Continue</button>
+            </div>
+        </section>
+
+        <!-- 5. MFA -->
+        <section id="view-idme-mfa" class="hidden fade-in bg-white flex-grow text-center py-12">
+            <h2 class="text-2xl font-bold mb-8">Verification Method</h2>
+            <button onclick="navigate('idme-verify')" class="max-w-xs mx-auto w-full p-6 border-2 border-blue-600 rounded-lg text-left flex items-center bg-blue-50">
+                <div class="flex-grow font-bold text-blue-800 text-center">Sign in with Passkey</div>
+            </button>
+        </section>
+
+        <!-- 6. VERIFY -->
+        <section id="view-idme-verify" class="hidden fade-in bg-white flex-grow text-center py-20">
+            <div class="mb-8"><svg class="w-20 h-20 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></div>
+            <button onclick="navigate('portal-terms')" class="idme-btn px-12 py-4 rounded font-bold text-lg text-white">Continue to Portal</button>
+        </section>
+
+        <!-- 7. TERMS (Ref: 1000060546.jpg) -->
+        <section id="view-portal-terms" class="hidden fade-in flex-grow bg-slate-50 flex items-center justify-center p-4">
+             <div class="terms-container w-full">
+                <div class="flex justify-center mb-10">
+                    <div class="relative w-16 h-16">
+                        <div class="absolute inset-0 bg-blue-900 rotate-45 rounded-sm"></div>
+                        <div class="absolute inset-2 bg-white rotate-45 rounded-sm flex items-center justify-center">
+                            <div class="w-8 h-8 bg-blue-900 rounded-sm"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="border border-gray-200 bg-[#f9fafb] p-6 mb-10 rounded text-center">
+                    <p class="text-gray-800">By signing in, you agree to the</p>
+                    <a href="#" class="text-[#2552d0] underline font-bold text-lg block mt-1">Privacy Act Statement and Terms of Service</a>
+                </div>
+                <div class="space-y-4">
+                    <button onclick="navigate('dashboard')" class="w-full btn-next py-4 rounded font-bold text-lg shadow-sm">Next</button>
+                    <button onclick="navigate('login-choice')" class="w-full border-2 border-gray-200 py-4 rounded font-bold text-blue-700">Exit</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. CITIZEN DASHBOARD (Ref: 1000060544.jpg) -->
+        <section id="view-dashboard" class="hidden fade-in flex-grow bg-white">
+            <header class="border-b p-4 flex justify-between items-center sticky top-0 bg-white z-10 shadow-sm">
+                <div class="flex items-center text-[#005ea2] font-bold text-xl">
+                    <svg class="w-8 h-8 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12V11a1 1 0 00.553.894l4.5 2.25a1 1 0 00.894 0l4.5-2.25A1 1 0 0016 11V10.12l1.69-.724a1 1 0 011.145 1.556l-7 7a1 1 0 01-1.68 0l-7-7a1 1 0 011.145-1.556z"/></svg>
+                    Public Service Portal
+                </div>
+                <button class="text-xs font-bold bg-gray-100 px-3 py-1 rounded">MENU</button>
+            </header>
+
+            <main class="max-w-2xl mx-auto p-4 space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold">Welcome, Ted!</h2>
+                    <p class="text-sm text-gray-600">You last signed in on <strong>January 27, 2026 at 9:11 AM EST.</strong></p>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex items-center text-[#005ea2] font-bold text-sm cursor-pointer hover:underline">
+                        <span class="mr-2">📥</span> Your Portal Service Statement
+                    </div>
+                    <div class="flex items-center text-[#005ea2] font-bold text-sm cursor-pointer hover:underline">
+                        <span class="mr-2">📇</span> Replace your Identification Card
+                    </div>
+                    <div class="flex items-center text-[#005ea2] font-bold text-sm cursor-pointer hover:underline">
+                        <span class="mr-2">📄</span> Your Benefit Verification Letter
+                    </div>
+
+                    <div class="bg-[#f8f9fa] border p-4 flex items-start">
+                        <span class="mr-3 text-lg">📄</span>
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-[#005ea2] underline text-sm">Upload Documents</h3>
+                            <p class="text-xs text-gray-600 mt-1">You have no pending requests. Complete open requests, search and submit forms, or upload documents.</p>
+                        </div>
+                    </div>
+
+                    <div onclick="navigate('scheduling')" class="bg-blue-50 border-2 border-blue-200 p-4 flex items-center justify-between cursor-pointer hover:bg-blue-100 transition-all rounded-sm shadow-sm">
+                        <div class="flex items-center">
+                            <span class="mr-3 text-xl">🗓️</span>
+                            <span class="font-bold text-blue-900">Schedule a Secure Appointment</span>
+                        </div>
+                        <span class="font-bold text-blue-600">➔</span>
+                    </div>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">🔍 Eligibility and Earnings</h3>
+                    <p class="text-sm font-medium mb-3">You have the 40 work credits you need to receive benefits!</p>
+                    <div class="earnings-grid">
+                        <div class="bg-green-700 rounded-sm"></div>
+                        <div class="bg-green-700 rounded-sm"></div>
+                        <div class="bg-green-700 rounded-sm"></div>
+                        <div class="bg-green-700 rounded-sm"></div>
+                        <div class="border-2 border-green-700 flex items-center justify-center font-bold text-green-700 text-xs">✓</div>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-4 italic">Earnings reported through last year and estimated for this current period.</p>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">📈 Retirement Calculator</h3>
+                    <div class="graph-container">
+                        <div class="graph-bar h-1/2 left-[15%]">
+                            <div class="graph-value">$2,900</div>
+                            <div class="graph-label">Age 62</div>
+                        </div>
+                        <div class="graph-bar h-3/4 left-[45%] bg-blue-700">
+                            <div class="graph-value text-blue-700">$4,188</div>
+                            <div class="graph-label text-blue-800">Age 67</div>
+                        </div>
+                        <div class="graph-bar h-full left-[75%]">
+                            <div class="graph-value">$5,254</div>
+                            <div class="graph-label">Age 70</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </section>
+
+        <!-- RICH SCHEDULING (Ref: Original Interactive Site) -->
+        <section id="view-scheduling" class="hidden fade-in flex-grow bg-slate-50">
+             <header class="portal-header p-4 sticky top-0 z-10 shadow-sm">
+                <div class="max-w-4xl mx-auto flex justify-between items-center">
+                    <h1 class="text-lg font-bold text-white">Appointment Scheduling</h1>
+                    <button onclick="navigate('dashboard')" class="text-xs font-bold border border-white/40 px-3 py-1 rounded text-white">CANCEL</button>
+                </div>
+            </header>
+
+            <main class="max-w-2xl mx-auto px-4 py-8">
+                <div class="flex items-center mb-8 space-x-2">
+                    <span class="step-indicator bg-blue-700 text-white" id="ind-1">1</span>
+                    <div class="h-px bg-gray-300 flex-grow"></div>
+                    <span class="step-indicator bg-gray-200" id="ind-2">2</span>
+                </div>
+
+                <div id="sched-step-1" class="space-y-6">
+                    <h2 class="text-2xl font-bold">Select a Service Reason</h2>
+                    <div class="grid gap-3">
+                        <button onclick="pickService(this, 'Disability')" class="sched-card text-left bg-white p-5 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex items-center justify-between rounded-lg">
+                            <div>
+                                <p class="font-bold text-lg text-slate-800">Discuss disability claim</p>
+                                <p class="text-xs text-gray-500 uppercase font-black tracking-tight">30 minutes • Phone or Video</p>
+                            </div>
+                            <span class="text-2xl opacity-20">➔</span>
+                        </button>
+                        <button onclick="pickService(this, 'Retirement')" class="sched-card text-left bg-white p-5 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex items-center justify-between rounded-lg">
+                            <div>
+                                <p class="font-bold text-lg text-slate-800">Retirement Benefits Review</p>
+                                <p class="text-xs text-gray-500 uppercase font-black tracking-tight">20 minutes • Phone</p>
+                            </div>
+                            <span class="text-2xl opacity-20">➔</span>
+                        </button>
+                        <button onclick="pickService(this, 'Personal Details')" class="sched-card text-left bg-white p-5 border-2 border-transparent shadow-sm hover:shadow-md transition-all flex items-center justify-between rounded-lg">
+                            <div>
+                                <p class="font-bold text-lg text-slate-800">Update Personal Details</p>
+                                <p class="text-xs text-gray-500 uppercase font-black tracking-tight">15 minutes • In-Person</p>
+                            </div>
+                            <span class="text-2xl opacity-20">➔</span>
+                        </button>
+                    </div>
+                    <div class="flex justify-end pt-8">
+                        <button onclick="goSchedStep(2)" id="btn-next-sched-1" disabled class="px-10 py-4 rounded-lg bg-gray-300 text-gray-500 font-bold cursor-not-allowed transition-colors">Continue to Times</button>
+                    </div>
+                </div>
+
+                <div id="sched-step-2" class="hidden space-y-6">
+                    <h2 class="text-2xl font-bold mb-4">Available Time Slots</h2>
+                    <p class="text-sm text-gray-600 mb-6 font-semibold">All times shown in Eastern Standard Time (EST).</p>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">8:30 AM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">9:15 AM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">10:00 AM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">10:45 AM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">1:30 PM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">2:15 PM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">3:00 PM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">3:45 PM</button>
+                        <button onclick="finishScheduling()" class="p-4 border-2 rounded-lg font-bold text-blue-800 border-blue-100 hover:bg-blue-600 hover:text-white transition-all text-sm">4:30 PM</button>
+                    </div>
+                    
+                    <button onclick="goSchedStep(1)" class="mt-12 text-blue-700 font-bold underline w-full">Change Service Reason</button>
+                </div>
+            </main>
+        </section>
+
+    </div>
+
+    <!-- SUCCESS MODAL -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
+            <div class="text-5xl mb-4">✅</div>
+            <h4 class="text-2xl font-bold mb-2">Booking Confirmed!</h4>
+            
+            <!-- Fictitious ID -->
+            <div class="bg-gray-50 border border-gray-100 rounded p-3 mb-6">
+                <p class="text-[10px] uppercase font-bold text-gray-400">Appointment ID</p>
+                <p class="text-xl font-mono font-bold text-[#005ea2]" id="appt-id">APT-72941-TX</p>
+            </div>
+
+            <p class="text-gray-600 mb-6 text-sm leading-relaxed">Your secure appointment has been successfully scheduled. We look forward to speaking with you.</p>
+            
+            <!-- SMS Selection Section -->
+            <div id="sms-section" class="border-t pt-6 mb-6">
+                <p class="text-sm font-bold text-slate-800 mb-4">Would you like to receive appointment details via SMS?</p>
+                <div class="flex space-x-2">
+                    <button onclick="confirmSMS(true)" class="flex-1 bg-blue-50 text-blue-700 border border-blue-200 font-bold py-2 rounded hover:bg-blue-100">Yes</button>
+                    <button onclick="confirmSMS(false)" class="flex-1 bg-gray-50 text-gray-600 border border-gray-200 font-bold py-2 rounded hover:bg-gray-100">No</button>
+                </div>
+            </div>
+
+            <!-- SMS Sent Confirmation (Hidden) -->
+            <div id="sms-sent" class="hidden border-t pt-6 mb-6">
+                <div class="flex items-center justify-center text-green-600 font-bold text-sm mb-2">
+                    <span class="mr-2">📱</span> Details sent!
+                </div>
+                <p class="text-xs text-gray-500">Sent to: (***) ***-1294</p>
+            </div>
+
+            <button onclick="closeModal()" class="w-full bg-[#005ea2] text-white px-10 py-4 rounded-lg font-bold text-lg hover:bg-blue-900 transition-colors">Return to Portal</button>
+        </div>
+    </div>
+
+    <script>
+        function navigate(viewId) {
+            console.log("Navigating to view:", viewId);
+            const sections = document.querySelectorAll('section');
+            sections.forEach(s => s.classList.add('hidden'));
+            
+            const target = document.getElementById('view-' + viewId);
+            if (target) {
+                target.classList.remove('hidden');
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function handleIdMeEmail() {
+            const input = document.getElementById('idme-email-input').value.trim();
+            document.getElementById('user-display-email').innerText = input || "tedbailey@outlook.com";
+            navigate('idme-password');
+        }
+
+        function pickService(btn, name) {
+            document.querySelectorAll('.sched-card').forEach(b => b.classList.remove('card-active'));
+            btn.classList.add('card-active');
+            const next = document.getElementById('btn-next-sched-1');
+            next.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            next.classList.add('bg-blue-700', 'text-white');
+            next.disabled = false;
+        }
+
+        function goSchedStep(step) {
+            document.getElementById('sched-step-1').classList.add('hidden');
+            document.getElementById('sched-step-2').classList.add('hidden');
+            document.getElementById('sched-step-' + step).classList.remove('hidden');
+            const ind2 = document.getElementById('ind-2');
+            if(step === 2) {
+                ind2.classList.remove('bg-gray-200');
+                ind2.classList.add('bg-blue-700', 'text-white');
+            } else {
+                ind2.classList.remove('bg-blue-700', 'text-white');
+                ind2.classList.add('bg-gray-200');
+            }
+        }
+
+        function finishScheduling() {
+            // Generate a random ID
+            const randomNum = Math.floor(10000 + Math.random() * 90000);
+            document.getElementById('appt-id').innerText = `APT-${randomNum}-TX`;
+            
+            // Reset SMS UI
+            document.getElementById('sms-section').classList.remove('hidden');
+            document.getElementById('sms-sent').classList.add('hidden');
+            
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function confirmSMS(wantSMS) {
+            document.getElementById('sms-section').classList.add('hidden');
+            if (wantSMS) {
+                document.getElementById('sms-sent').classList.remove('hidden');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            navigate('dashboard');
+        }
+    </script>
+</body>
+</html>
+
